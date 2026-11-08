@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import OnboardingForm from "./OnboardingForm";
 
 export default async function Onboarding() {
   const session = await auth();
@@ -19,8 +20,10 @@ export default async function Onboarding() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-xl px-6 py-16">
-      <h1 className="text-2xl font-bold">Onboarding (placeholder)</h1>
+    <main className="flex min-h-screen flex-col items-center justify-center gap-6 px-6 py-16">
+      <h1 className="text-2xl font-bold">Welcome to Movie Memory</h1>
+      <p>Choose your favorite movie to get started.</p>
+      <OnboardingForm />
     </main>
   );
 }
