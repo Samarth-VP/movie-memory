@@ -1,28 +1,41 @@
 import { redirect } from "next/navigation";
-import { auth, signOut } from "@/auth";
-import { db } from "@/lib/db";
+import { signOut } from "@/auth";
+import { requireUser } from "@/lib/session";
+import Avatar from "./Avatar";
 
-export default async function Dashboard() {
-  const session = await auth();
-  if (!session?.user) {
-    redirect("/");
-  }
+export default async function DashboardPage() {
+  const user = await requireUser();
+  // No movie yet means onboarding hasn't happened.
+  if (!user.favoriteMovie) redirect("/onboarding");
 
-  // Only the authenticated session chooses which user record to read.
-  const user = await db.user.findUnique({
-    where: { id: session.user.id },
-    select: { favoriteMovie: true },
-  });
-
-  if (!user?.favoriteMovie) {
-    redirect("/onboarding");
-  }
+  // Google can omit the name, so fall back to the part of the email before "@".
+  const displayName = user.name?.trim() || user.email.split("@")[0];
 
   return (
-    <main className="mx-auto flex w-full max-w-xl flex-col gap-4 px-6 py-16">
-      <h1 className="text-2xl font-bold">Dashboard (placeholder)</h1>
-      <p>Email: {session.user.email}</p>
-      <p>Favorite movie: {user.favoriteMovie}</p>
+    <main className="mx-auto flex min-h-screen max-w-xl flex-col gap-6 p-8">
+      <header className="flex items-center gap-4">
+        <Avatar image={user.image} name={displayName} />
+        <div>
+          <h1 className="text-2xl font-bold">{displayName}</h1>
+          <p className="text-gray-400">{user.email}</p>
+        </div>
+      </header>
+
+      <section className="rounded-lg border border-gray-500/40 p-5">
+        <h2 className="text-sm uppercase tracking-wide text-gray-400">
+          Favorite movie
+        </h2>
+        <p className="mt-1 text-xl font-semibold">{user.favoriteMovie}</p>
+      </section>
+
+      {/* Reserved for the fun fact, built in the next step. */}
+      <section className="rounded-lg border border-dashed border-gray-500/40 p-5">
+        <h2 className="text-sm uppercase tracking-wide text-gray-400">
+          Fun fact
+        </h2>
+        <p className="mt-1 text-gray-400">Coming in the next step.</p>
+      </section>
+
       <form
         action={async () => {
           "use server";
@@ -31,7 +44,7 @@ export default async function Dashboard() {
       >
         <button
           type="submit"
-          className="rounded bg-foreground px-4 py-2 font-medium text-background"
+          className="rounded border border-gray-500/40 px-4 py-2"
         >
           Log out
         </button>

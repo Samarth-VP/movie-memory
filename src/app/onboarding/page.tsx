@@ -1,28 +1,18 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
-import { db } from "@/lib/db";
+import { requireUser } from "@/lib/session";
 import OnboardingForm from "./OnboardingForm";
 
-export default async function Onboarding() {
-  const session = await auth();
-  if (!session?.user) {
-    redirect("/");
-  }
-
-  // Read only the field needed to decide whether onboarding is necessary.
-  const user = await db.user.findUnique({
-    where: { id: session.user.id },
-    select: { favoriteMovie: true },
-  });
-
-  if (user?.favoriteMovie) {
-    redirect("/dashboard");
-  }
+export default async function OnboardingPage() {
+  const user = await requireUser();
+  // Onboarding is first-time only: anyone with a movie goes to the dashboard.
+  if (user.favoriteMovie) redirect("/dashboard");
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 px-6 py-16">
-      <h1 className="text-2xl font-bold">Welcome to Movie Memory</h1>
-      <p>Choose your favorite movie to get started.</p>
+    <main className="flex min-h-screen flex-col items-center justify-center gap-6 p-8">
+      <h1 className="text-3xl font-bold">Welcome to Movie Memory</h1>
+      <p className="text-gray-400">
+        Tell us your favorite movie and we&apos;ll show you a fun fact about it.
+      </p>
       <OnboardingForm />
     </main>
   );
