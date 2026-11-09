@@ -1,6 +1,10 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { FactUnavailableError, getFact } from "@/lib/facts/getFact";
+import {
+  FactUnavailableError,
+  RateLimitedError,
+  getFact,
+} from "@/lib/facts/getFact";
 import { generateFact } from "@/lib/openai";
 
 export async function GET() {
@@ -27,11 +31,17 @@ export async function GET() {
   }
 
   // 3. Cached or fresh fact. getFact already falls back to an older fact
-  //    when OpenAI fails; an error only reaches here if there is none.
+  //    when it can; an error only reaches here if there is none.
   try {
     const fact = await getFact(user.id, user.favoriteMovie, generateFact);
     return Response.json(fact);
   } catch (err) {
+    if (err instanceof RateLimitedError) {
+      return Response.json(
+        { error: "You're requesting new facts too quickly. Please try again in a few minutes." },
+        { status: 429 },
+      );
+    }
     if (!(err instanceof FactUnavailableError)) {
       console.error("Unexpected fact error:", err);
     }

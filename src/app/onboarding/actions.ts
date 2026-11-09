@@ -24,11 +24,20 @@ export async function saveFavoriteMovie(
 
   // The user id comes from the session, never from the form,
   // so this can only ever update the signed-in user's own row.
-  await db.user.update({
-    where: { id: session.user.id },
-    data: { favoriteMovie: parsed.data },
-  });
+  try {
+    await db.user.update({
+      where: { id: session.user.id },
+      data: { favoriteMovie: parsed.data },
+    });
+  } catch (err) {
+    // Log the real error on the server, show the user a plain message.
+    console.error("Saving favorite movie failed:", err);
+    return {
+      error: "We couldn't save your movie right now. Please try again.",
+      value: raw,
+    };
+  }
 
-  // redirect() works by throwing, so it must stay outside any try/catch.
+  // redirect() works by throwing, so it must stay outside the try/catch above.
   redirect("/dashboard");
 }

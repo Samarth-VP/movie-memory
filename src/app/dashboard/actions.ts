@@ -20,10 +20,16 @@ export async function updateFavoriteMovie(
   const parsed = movieSchema.safeParse(rawMovie);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
-  await db.user.update({
-    where: { id: session.user.id },
-    data: { favoriteMovie: parsed.data },
-  });
+  try {
+    await db.user.update({
+      where: { id: session.user.id },
+      data: { favoriteMovie: parsed.data },
+    });
+  } catch (err) {
+    // Log the real error on the server, show the user a plain message.
+    console.error("Updating favorite movie failed:", err);
+    return { error: "We couldn't save your movie right now. Please try again." };
+  }
 
   // Re-render the dashboard with the new movie.
   revalidatePath("/dashboard");

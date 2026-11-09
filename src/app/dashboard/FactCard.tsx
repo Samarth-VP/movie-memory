@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 type FactResponse = { content: string; createdAt: string; stale: boolean };
@@ -7,15 +8,23 @@ type FactResponse = { content: string; createdAt: string; stale: boolean };
 // One state at a time: the UI is always in exactly one of these.
 type State =
   | { status: "loading" }
+  | { status: "expired" }
   | { status: "error"; message: string }
   | { status: "ready"; fact: FactResponse };
 
 async function fetchFact(): Promise<State> {
   try {
     const res = await fetch("/api/fact");
-    const body = await res.json();
-    if (!res.ok) {
-      return { status: "error", message: body.error ?? "Something went wrong." };
+    // 401 means the session is gone (expired, or signed out in another tab).
+    if (res.status === 401) return { status: "expired" };
+
+    // The body might not be JSON (for example a crash page), so don't assume.
+    const body = await res.json().catch(() => null);
+    if (!res.ok || !body) {
+      return {
+        status: "error",
+        message: body?.error ?? "Something went wrong. Please try again.",
+      };
     }
     return { status: "ready", fact: body };
   } catch {
@@ -51,6 +60,15 @@ export default function FactCard() {
         <p className="mt-1 text-gray-400">Looking up a fun fact...</p>
       )}
 
+      {state.status === "expired" && (
+        <p className="mt-1">
+          Your session has expired.{" "}
+          <Link href="/" className="underline">
+            Sign in again
+          </Link>
+        </p>
+      )}
+
       {state.status === "error" && (
         <p role="alert" className="mt-1 text-red-500">
           {state.message}
@@ -68,17 +86,21 @@ export default function FactCard() {
         </>
       )}
 
-      <button
-        type="button"
-        onClick={refresh}
-        disabled={state.status === "loading"}
-        className="mt-4 rounded border border-gray-500/40 px-3 py-1.5 text-sm disabled:opacity-50"
-      >
-        {state.status === "error" ? "Try again" : "Get another fact"}
-      </button>
-      <p className="mt-2 text-xs text-gray-500">
-        A new fact is generated at most once a minute.
-      </p>
+      {state.status !== "expired" && (
+        <>
+          <button
+            type="button"
+            onClick={refresh}
+            disabled={state.status === "loading"}
+            className="mt-4 rounded border border-gray-500/40 px-3 py-1.5 text-sm disabled:opacity-50"
+          >
+            {state.status === "error" ? "Try again" : "Get another fact"}
+          </button>
+          <p className="mt-2 text-xs text-gray-500">
+            A new fact is generated at most once a minute.
+          </p>
+        </>
+      )}
     </section>
   );
 }

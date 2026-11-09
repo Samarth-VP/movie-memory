@@ -10,6 +10,13 @@ export type Clock = () => Date;
 // "Younger" is strict (<): a fact exactly 60s old is expired.
 export const CACHE_WINDOW_MS = 60_000;
 
+// Soft limit on NEW facts per user, counted across all movies. Without it,
+// switching movies over and over would bypass the per-movie cache and cost
+// an OpenAI call each time. "Soft": the lock below is per user+movie, so
+// simultaneous requests for different movies could overshoot slightly.
+export const RATE_LIMIT_MAX_FACTS = 10;
+export const RATE_LIMIT_WINDOW_MS = 10 * 60_000;
+
 // The transaction stays open while we wait for OpenAI (10s timeout in
 // openai.ts), and a second tab waiting on the lock counts against this too.
 // Prisma's 5s default would cancel a normal request, so we raise it.
@@ -20,6 +27,14 @@ export class FactUnavailableError extends Error {
   constructor() {
     super("No fact could be generated and none is cached.");
     this.name = "FactUnavailableError";
+  }
+}
+
+// Thrown when the user asked for too many new facts recently.
+export class RateLimitedError extends Error {
+  constructor() {
+    super("Too many new facts requested recently.");
+    this.name = "RateLimitedError";
   }
 }
 
@@ -57,8 +72,18 @@ export async function getFact(
           return toResult(latest, false);
         }
 
-        // 3. Cache miss: generate, store, return. createdAt comes from the
-        //    same clock used for the check above, so both sides agree.
+        // 3. Rate limit: cache hits above create no rows, so they never
+        //    count. Only requests that would call OpenAI get here.
+        const recentCount = await tx.fact.count({
+          where: {
+            userId,
+            createdAt: { gt: new Date(now().getTime() - RATE_LIMIT_WINDOW_MS) },
+          },
+        });
+        if (recentCount >= RATE_LIMIT_MAX_FACTS) throw new RateLimitedError();
+
+        // 4. Cache miss: generate, store, return. createdAt comes from the
+        //    same clock used for the checks above, so they all agree.
         const content = await generate(movieTitle);
         const fact = await tx.fact.create({
           data: { userId, movieTitle, content, createdAt: now() },
@@ -68,9 +93,12 @@ export async function getFact(
       { timeout: TRANSACTION_TIMEOUT_MS },
     );
   } catch (err) {
-    // 4. Failure: OpenAI error or timeout, lock wait too long, DB hiccup.
-    //    Prefer an old fact over an error page; flag it as stale.
-    console.error("Fact generation failed, looking for a cached fact:", err);
+    // 5. Failure: OpenAI error or timeout, rate limit, lock wait too long,
+    //    DB hiccup. Prefer an old fact over an error page; flag it as stale.
+    //    Hitting the rate limit is expected behavior, so don't log it.
+    if (!(err instanceof RateLimitedError)) {
+      console.error("Fact generation failed, looking for a cached fact:", err);
+    }
 
     const fallback = await db.fact.findFirst({
       where: { userId, movieTitle },
@@ -78,6 +106,8 @@ export async function getFact(
     });
     if (fallback) return toResult(fallback, true);
 
+    // Nothing cached: let the route tell the user why.
+    if (err instanceof RateLimitedError) throw err;
     throw new FactUnavailableError();
   }
 }
