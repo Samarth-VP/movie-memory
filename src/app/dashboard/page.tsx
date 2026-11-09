@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { signOut } from "@/auth";
 import { requireUser } from "@/lib/session";
 import Avatar from "./Avatar";
+import FactCard from "./FactCard";
 
 export default async function DashboardPage() {
   const user = await requireUser();
@@ -28,13 +29,7 @@ export default async function DashboardPage() {
         <p className="mt-1 text-xl font-semibold">{user.favoriteMovie}</p>
       </section>
 
-      {/* Reserved for the fun fact, built in the next step. */}
-      <section className="rounded-lg border border-dashed border-gray-500/40 p-5">
-        <h2 className="text-sm uppercase tracking-wide text-gray-400">
-          Fun fact
-        </h2>
-        <p className="mt-1 text-gray-400">Coming in the next step.</p>
-      </section>
+      <FactCard />
 
       <form
         action={async () => {
