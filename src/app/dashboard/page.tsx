@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { signOut } from "@/auth";
 import { requireUser } from "@/lib/session";
 import Avatar from "./Avatar";
+import EditableMovie from "./EditableMovie";
 import FactCard from "./FactCard";
 
 export default async function DashboardPage() {
@@ -26,10 +27,12 @@ export default async function DashboardPage() {
         <h2 className="text-sm uppercase tracking-wide text-gray-400">
           Favorite movie
         </h2>
-        <p className="mt-1 text-xl font-semibold">{user.favoriteMovie}</p>
+        <EditableMovie movie={user.favoriteMovie} />
       </section>
 
-      <FactCard />
+      {/* key: when the movie changes, React remounts the card, which
+          fetches a fact for the new movie instead of keeping the old one. */}
+      <FactCard key={user.favoriteMovie} />
 
       <form
         action={async () => {
