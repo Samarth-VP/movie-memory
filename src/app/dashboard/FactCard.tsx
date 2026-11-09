@@ -58,7 +58,14 @@ export default function FactCard() {
       )}
 
       {state.status === "ready" && (
-        <p className="mt-1">{state.fact.content}</p>
+        <>
+          <p className="mt-1">{state.fact.content}</p>
+          {state.fact.stale && (
+            <p className="mt-2 text-sm text-amber-500">
+              We couldn&apos;t get a new fact just now, so this is an earlier one.
+            </p>
+          )}
+        </>
       )}
 
       <button
@@ -69,6 +76,9 @@ export default function FactCard() {
       >
         {state.status === "error" ? "Try again" : "Get another fact"}
       </button>
+      <p className="mt-2 text-xs text-gray-500">
+        A new fact is generated at most once a minute.
+      </p>
     </section>
   );
 }

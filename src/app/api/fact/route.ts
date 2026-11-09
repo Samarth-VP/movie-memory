@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { getFact } from "@/lib/facts/getFact";
+import { FactUnavailableError, getFact } from "@/lib/facts/getFact";
 import { generateFact } from "@/lib/openai";
 
 export async function GET() {
@@ -26,13 +26,15 @@ export async function GET() {
     );
   }
 
-  // 3. Generate, store and return. Log the real error on the server,
-  //    send the user a friendly message without internal details.
+  // 3. Cached or fresh fact. getFact already falls back to an older fact
+  //    when OpenAI fails; an error only reaches here if there is none.
   try {
     const fact = await getFact(user.id, user.favoriteMovie, generateFact);
     return Response.json(fact);
   } catch (err) {
-    console.error("Fact generation failed:", err);
+    if (!(err instanceof FactUnavailableError)) {
+      console.error("Unexpected fact error:", err);
+    }
     return Response.json(
       { error: "We couldn't generate a fact right now. Please try again in a moment." },
       { status: 502 },
