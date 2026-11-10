@@ -181,7 +181,6 @@ Documentation and articles behind the main decisions:
 
 **OpenAI**
 - [Models](https://developers.openai.com/docs/models): picking a smaller, cheaper model for a short fact
-- [API request timeouts, in the flex processing guide](https://developers.openai.com/api/docs/guides/flex-processing): the default SDK timeout is 10 minutes, which is why I set my own
 
 **Google**
 - [OAuth app publishing status and verification](https://support.google.com/cloud/answer/10311615): why reviewers need to be test users on their own client
