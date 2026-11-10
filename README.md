@@ -199,3 +199,6 @@ Documentation and articles behind the main decisions:
 - **What to test:** after each feature, Claude gave me a checklist of what to try, and I ran those checks by hand (the login flow, validation, the missing Google photo, and the cache).
 - **My own decisions:** building it step by step so I understood each piece, choosing Variant A, adding the option to change the favorite movie, and leaving out extra features.
 - No secrets are in the repo. They live in `.env`, which is gitignored.
+
+### Video Link
+- https://drive.google.com/file/d/1JxLrFooJ3a_l9ZcDNSLIHCpCenMl8JDo/view?usp=sharing
